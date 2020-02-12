@@ -1,0 +1,157 @@
+---
+title: "Lab 2"
+author: 'Hanao Li  UNI: hl3202'
+date: "September 24, 2018"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r, echo = FALSE}
+set.seed(1) # Please don't remove this code!
+```
+
+# Instructions 
+Before the lab is due, make sure that you upload a knitted HTML or pdf file to the canvas page (this should have a .html or .pdf extension).  You also need to change the file name: replace "UNI" by your own uni.
+
+# Part (A): Simple Linear Regression Model
+
+1) Import the **diamonds_small.csv** dataset into R and store in a dataframe called **diamonds**.  Use the **lm()** command to regress **price** (response) on **carat** (predictor) and save this result as **lm0**.  What are the coefficients of **lm0**? (Some of this problem is solved for you below.)
+
+```{r}
+# You'll want to type your response to question A(1) here.  Your response should look like:
+setwd("C:/Users/36576/Desktop/R/")
+diamonds <- read.csv("diamonds_small.csv", as.is = TRUE, header = TRUE)
+lm0 <- lm(diamonds$price ~ diamonds$carat)
+summary(lm0)
+# Of course, your answer should not be commented out.
+```
+
+Recall from lecture that the estimates $\hat{\beta}_0$ and $\hat{\beta}_1$ that you just calculated with **lm()** are functions of the data values and are therefore themselves are random (they inherit variability from the data).  If we were to recollect the diamonds data over and over again, the estimates would be different each time.
+
+
+In this lab we'll use bootstrapping to answer the following questions:
+\begin{enumerate}
+\item \textbf{``How much does $\hat{\beta}_1$ vary from one replication of the experiment to the other?"}
+\item \textbf{``What are all the values of $\beta_1$ that would have produced this data with high probability?"}
+\end{enumerate}
+
+# Part (B): How Does $\hat{\beta}_1$ Vary?
+
+Strategy:  we'll re-sample **(price, carat)** pairs in order to provide an estimate for how $\hat{\beta}_1$ varies across samples.
+
+1) How many rows are in the **diamonds** dataset?  Call this value **n**.
+
+```{r}
+# You'll want to type your response to question B(1) here.  Your response should look like:
+n <- nrow(diamonds)
+n
+```
+
+2) We'll next use the **sample()** function to re-sample **n** rows of the **diamonds** dataset *with replacement*.  The following code provides a single re-sample of the values $1, 2, \ldots, n$, or a single re-sample of the rows of the dataset.
+
+```{r}
+resample1 <- sample(1:n, n, replace = TRUE)
+# Remove the comment symbol in front of the above after n is assigned in B(1)
+```
+
+Now write a loop to calculate **B <- 1000** such re-samples and store them as rows of the matrix **resampled_values** which will have **B** rows and **n** columns.
+
+```{r}
+# You'll want to type your response to question B(2) here.  Your response should look like:
+B <- 1000
+resampled_values <- matrix(NA, nrow = B, ncol = n)
+for (b in 1:B) {
+#   Write code that fills in the matrix resample_values with re-samples.
+  resampled_values[b,] <- sample(1:n, n, replace = TRUE)
+}
+```
+
+3) Now we'll use each re-sampled dataset to provide a new estimate of $\hat{\beta}_1$.  Write a line of code that uses **resample1** above to produce a resamples dataset of **(price, carat)** pairs.  Using the re-sampled dataset, use **lm()** to produce new estimates of $\hat{\beta}_0$ and $\hat{\beta}_1$.  These values should be stored in a vector called **resample1_ests**.
+
+```{r}
+# You'll want to type your response to question B(3) here.  Your response should look like:
+resampled_data <- diamonds[resample1, ]
+resample1_ests <- coefficients(lm(resampled_data$price ~ resampled_data$carat))
+resample1_ests
+```
+
+Hint: (a) Note that the following code produces the re-sampled dataset from the re-sampled values:
+```{r}
+# resampled_data <- diamonds[resample1, ]
+# Remove the comment symbol in front of the above after resample1 is assigned in B(2)
+```
+
+Hint: (b) You'll probably want to use the **coefficients()** function.
+
+4) Repeat the above call for each re-sampled dataset produced from the **resampled_values** matrix.  We'll store the new coefficient estimates in a matrix **resampled_ests** with **B** rows and **2** columns.  Again you'll want to write a loop, this time that iterates over the rows of **resampled_values**.  (Note that if you are very clever this could be done using **apply()**.)  Make sure to print **head(resample_ests)** at the end.
+
+```{r}
+# You'll want to type your response to question B(4) here.  Your response should look like:
+resampled_ests <- matrix(NA, nrow = B, ncol = 2)
+colnames(resampled_ests) <- c("Intercept_Est", "Slope_Est")
+for (b in 1:B) {
+#   Write code that fills in the matrix resample_ests with coefficent estimates.
+  resampled_data <- diamonds[resampled_values[b,],]
+  resampled_ests[b,] <- coefficients(lm(resampled_data$price ~ resampled_data$carat))
+}
+head(resampled_ests)
+```
+
+Hint: You may want to use multiple lines of code within the for loop.  One idea is to first use the rows corresponding to re-sample **b** provided in **resampled_values** to created a resampled dataset.  Then use the new dataset to provide new estimates of the coefficients.
+
+5) Recall from lecture that $(\hat{\beta}_1^{(b)})_{b=1}^B - \hat{\beta}_1$ approximates the sampling distribution of $\hat{\beta}_1 - \beta_1$ where $\beta_1$ is the population parameter, $\hat{\beta}_1$ is the estimate from out original dataset, and $(\hat{\beta}_1^{(b)})_{b=1}^B$ are the $B$ bootstrap estimates.  
+
+Make a vector **diff_estimates** that holds the differences between the original estimate of $\hat{\beta}_1$ from **lm0** and the bootstrap estimates.  It should have length **B**.
+
+```{r}
+# You'll want to type your response to question B(5) here.  Your response should look like:
+diff_estimates <- rep(0, B)
+for (b in 1:B){
+  diff_estimates[b] <- resampled_ests[b,2] - lm0$coefficients[2]
+}
+```
+
+6) Plot a histogram of the bootstrap estimates of $\hat{\beta}_1$ (they're in the `Slope_Est' column).  Label the x-axis appropriately.
+
+```{r}
+# You'll want to type your response to question B(6) here.
+hist(resampled_ests[,2], xlab = 'estimates of the slope')
+```
+
+7) Calculate the standard deviation of the bootstrap estimates.
+
+```{r}
+# You'll want to type your response to question B(7) here.
+sd(resampled_ests[,2])
+```
+
+# Part (C): Bootstrap Confidence Intervals
+
+Note: This section is optional.  If you get the chance to do it during lab, great, but it's not necessary that this part is completed when you turn in the lab.
+
+Finally we'd like to approximate confidence intervals for the regression coefficients.  Recall that a confidence interval is a random interval which contains the truth with high
+probability (the confidence level). If the confidence interval for $\beta_1$ is C, and the confidence level is $1-\alpha$, then we want 
+\[Pr(\beta_1 \in C) = 1-\alpha\]
+no matter what the true value of $\beta_1$. 
+
+We estimate the confidence interval from the bootstrap estimates by finding a range of $(\hat{\beta}_1^{(b)})_{b=1}^B - \hat{\beta}_1$ which holds $1-alpha$ percent of the values.  In our case, let $\alpha = 0.05$, so we estimate a confidence interval with level $0.95$.
+
+(1) Let **Cu** and **Cl** be the upper and lower limits of the confidence interval.  Use the **quantile()** function to find the $0.025$ and $0.975$ quantiles of the vector **diff_estimates** calculated in B(5).  Then **Cu** is the sum of the original estimate of $\hat{\beta}_1$ from **lm0** with the upper quantile and **Cl** is the sum of the original estimate of $\hat{\beta}_1$ from **lm0** with the lower quantile.
+
+```{r}
+# You'll want to type your response to question C(1) here.  Your response should look like:
+Cl <- 2*coefficients(lm0)[2] - quantile(resampled_ests[, 2], 0.975) 
+Cu <- 2*coefficients(lm0)[2] - quantile(resampled_ests[, 2], 0.025)
+int <- c(Cl, Cu)
+int
+```
+
+(2) Instead if traditional  bootstrap intervals, construct **percentile** based bootstrap intervals.  Use the **quantile()** function to find the $0.025$ and $0.975$ quantiles of the vector **resampled_ests[, "Slope_Est"]** calculated in B(4). 
+
+```{r}
+Cl <- quantile(resampled_ests[, 2], 0.025) 
+Cu <- quantile(resampled_ests[, 2], 0.975)
+int <- c(Cl, Cu)
+int
+```
