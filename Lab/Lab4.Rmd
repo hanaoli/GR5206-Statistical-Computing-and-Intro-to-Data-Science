@@ -1,0 +1,166 @@
+---
+title: "Lab 4"
+author: "Hanao Li   hl3202"
+date: "October 23, 2018"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r, echo = FALSE}
+set.seed(1) # Please don't remove this code!
+```
+
+# Instructions 
+Make sure that you upload a knitted pdf or html file to the canvas page (this should have a .pdf or .html extension).  Also upload the .Rmd file.  Include output for each question in its own individual code chunk and don't print out any vector that has more than 20 elements.
+
+Objectives: KNN Classification and Cross-Validation
+
+# Background
+
+Today we'll be using the *Weekly* dataset from the *ISLR* package.  This data is similar to the *Smarket* data from class.  The dataset contains $1089$ weekly returns from the beginning of 1990 to the end of 2010.  Make sure that you have the *ISLR* package installed and loaded by running (without the code commented out) the following:
+```{r}
+# install.packages("ISLR")
+library(ISLR)
+```
+We'd like to see if we can accurately predict the direction of a week's return based on the returns over the last five weeks.  *Today* gives the percentage return for the week considered and *Year* provides the year that the observation was recorded.  *Lag1* - *Lag5* give the percentage return for 1 - 5 weeks previous and *Direction* is a factor variable indicating the direction ('UP' or 'DOWN') of the return for the week considered.
+
+# Part 1: Visualizing the relationship between this week's returns and the previous week's returns.
+
+1. Explore the relationship between a week's return and the previous week's return.  You should plot more graphs for yourself, but include in the lab write-up a scatterplot of the returns for the weeks considered (*Today*) vs the return from two weeks previous (*Lag2*), and side-by-side boxplots for the lag one week previous (*Lag1*) divided by the direction of this week's Reuther (*Direction*).
+
+
+```{r, echo = FALSE}
+## Scatterplot Lag
+plot(Weekly$Lag1,Weekly$Today,main="Returns",xlab="One Week Ago",ylab="Today")
+abline(lm(Weekly$Today~Weekly$Lag1),col="red")
+
+plot(Weekly$Lag2,Weekly$Today,main="Returns",xlab="Two Weeks Ago",ylab="Today")
+abline(lm(Weekly$Today~Weekly$Lag2),col="red")
+
+plot(Weekly$Lag3,Weekly$Today,main="Returns",xlab="Three Weeks Ago",ylab="Today")
+abline(lm(Weekly$Today~Weekly$Lag3),col="red")
+
+plot(Weekly$Lag4,Weekly$Today,main="Returns",xlab="Four Weeks Ago",ylab="Today")
+abline(lm(Weekly$Today~Weekly$Lag4),col="red")
+
+plot(Weekly$Lag5,Weekly$Today,main="Returns",xlab="Five Weeks Ago",ylab="Today")
+abline(lm(Weekly$Today~Weekly$Lag5),col="red")
+
+
+## Boxplot Lag 
+boxplot(Weekly$Lag1~Weekly$Direction,main="Returns",ylab="One Week Ago",xlab="Direction")
+
+boxplot(Weekly$Lag2~Weekly$Direction,main="Returns",ylab="Two Weeks Ago",xlab="Direction")
+
+boxplot(Weekly$Lag3~Weekly$Direction,main="Returns",ylab="Three Weeks Ago",xlab="Direction")
+
+boxplot(Weekly$Lag4~Weekly$Direction,main="Returns",ylab="Four Weeks Ago",xlab="Direction")
+
+boxplot(Weekly$Lag5~Weekly$Direction,main="Returns",ylab="Five Weeks Ago",xlab="Direction")
+```
+
+
+
+# Part 2: Building a classifier
+
+Recall the KNN procedure.  We classify a new point with the following steps:
+
+-- Calculate the Euclidean distance between the new point and all other points.
+
+-- Create the set $\mathcal{N}_{new}$ containing the $K$ closest points (or, nearest neighbors) to the new point.
+
+-- Determine the number of 'UPs' and 'DOWNs' in $\mathcal{N}_{new}$ and classify the new point according to the most frequent.
+
+2. We'd like to perform KNN on the *Weekly* data, as we did with the *Smarket* data in class.  In class we wrote the following function which takes as input a new point $(Lag1_{new}, Lag2_{new})$ and provides the KNN decision using as defaults $K=5$, Lag1 data given in *Smarket\$Lag1*, and Lag2 data given in *Smarket\$Lag2*.  Update the function to calculate the KNN decision for weekly market direction using the *Weekly* dataset with *Lag1* - *Lag5* as predictors.  Your function should have only three input values: (1) a new point which should be a vector of length $5$, (2) a value for K, and (3) the Lag data which should be a data frame with five columns (and n rows). 
+
+```{r}
+ KNN.decision <- function(Lag.new, K = 5, Lag = SWeekly) {
+   
+   n <- nrow(Lag)
+   
+   stopifnot(ncol(Lag) == 6, length(Lag.new) == 5, K <= n)
+   
+   dists       <- sqrt((SWeekly$Lag1-Lag.new[1])^2 + (SWeekly$Lag2-Lag.new[2])^2 + (SWeekly$Lag3-Lag.new[3])^2 + (SWeekly$Lag4-Lag.new[4])^2 + (SWeekly$Lag5-Lag.new[5])^2)
+   neighbors  <- order(dists)[1:K]
+   neighb.dir <- SWeekly$Direction[neighbors]
+   choice      <- names(which.max(table(neighb.dir)))
+   return(choice)
+}
+```
+
+3. Now train your model using data from 1990 - 2008 and use the data from 2009-2010 as test data.  To do this, divide the data into two data frames, *test* and *train*.  Then write a loop that iterates over the test points in the test dataset calculating a prediction for each based on the training data with $K=5$.  Save these predictions in a vector.  Finally, calculate your test error, which you should store as a variable named *test.error*.  The test error calculates the proportion of your predictions which are incorrect (don't match the actual directions).
+
+```{r}
+train <- Weekly[Weekly$Year <= 2008,]
+test <- Weekly[Weekly$Year > 2008,]
+pred <- rep(NA, nrow(test))
+SWeekly <- train[,c("Lag1", "Lag2", "Lag3", "Lag4", "Lag5", "Direction")]
+for (i in 1:nrow(test)){
+  newp <- c(test$Lag1[i], test$Lag2[i], test$Lag3[i], test$Lag4[i], test$Lag5[i])
+  pred[i] <- KNN.decision(newp, K = 5, SWeekly)
+}
+sum(pred != test$Direction) / nrow(test)
+```
+
+4. Do the same thing as in question 3, but instead use $K=3$.  Which has a lower test error?
+```{r}
+for (i in 1:nrow(test)){
+  newp <- c(test$Lag1[i], test$Lag2[i], test$Lag3[i], test$Lag4[i], test$Lag5[i])
+  pred[i] <- KNN.decision(newp, K = 3, SWeekly)
+}
+sum(pred != test$Direction) / nrow(test)
+```
+
+
+
+# Part 3: Cross-validation
+
+Ideally we'd like to use our model to predict future returns, but how do we know which value of $K$ to choose?  We could choose the best value of $K$ by training with data from 1990 - 2008, testing with the 2009 - 2010 data, and selecting the model with the lowest test error as in the previous section.  However, in order to build the best model, we'd like to use ALL the data we have to train the model.  In this case, we could use all of the *Weekly* data and choose the best model by comparing the training error, but unfortunately this isn't usually a good predictor of the test error.
+
+In this section, we instead consider a class of methods that estimate the test error rate by holding out a (random) subset of the data to use as a test set, which is called $k$-fold cross validation. (Note this lower case k is different than the upper case K in KNN.  They have nothing to do with each other, it just happens that the standard is to use the same letter in both.)  This approach involves randomly dividing the set of observations into $k$ groups, or folds, of equal size. The first fold is treated as a test set, and the model is fit on the remaining $k-1$ folds. The error rate, ERR1, is then computed on the observations in the held-out fold. This procedure is repeated $k$ times; each time, a different group of observations is treated as a test set. This process results in $k$ estimates of the test error: ERR1, ERR2, ..., ERRk. The $k$-fold CV estimate of the test error is computed by averaging these values,
+\[CV_{(k)} = \frac{1}{k}\sum_{i=1}^k ERR_k.\]
+
+We'll run a $9$-fold cross-validation in the following.  Note that we have 1089 rows in the dataset, so each fold will have exactly 121 members.
+
+5. Create a vector *fold* which has $n$ elements, where $n$ is the number of rows in *Weekly*.  We'd like for the *fold* vector to take values in 1-9 which assign each corresponding row of the *Weekly* dataset to a fold.  Do this in two steps: (1) create a vector using *rep()* with the values 1-9 each repeated 121 times (note $1089 = 121 \cdot 9$), and (2) use *sample()* to randomly reorder the vector you created in (1).
+```{r}
+fold <- rep(1:9, each = nrow(Weekly) / 9)
+fold <- resample <- sample(fold, 1089, replace = F)
+Weekly$Index <- fold
+```
+
+6. Iterate over the $9$ folds, treating a different fold as the test set and all others the training set in each iteration.    Using a KNN classifier with $K=5$ calculate the test error for each fold.  Then calculate the cross-validation approximation to the test error which is the average of ERR1, ERR2, ..., ERR9.
+```{r}
+ERR <- rep(NA, 9)
+pred <- rep(NA, length(Weekly) / 9)
+for (i in 1:9){
+  testset <- Weekly[Weekly$Index == i,]
+  trainset <- Weekly[Weekly$Index != i, ]
+  trainset <- trainset[,c("Lag1", "Lag2", "Lag3", "Lag4", "Lag5", "Direction")]
+  for (j in 1:nrow(testset)){
+  newp <- c(testset$Lag1[j], testset$Lag2[j], testset$Lag3[j], testset$Lag4[j], testset$Lag5[j])
+  pred[j] <- KNN.decision(newp, K = 5, trainset)
+  }
+  ERR[i] <- sum(pred != testset$Direction) / nrow(testset)
+}
+mean(ERR)
+```
+
+7. Repeat step (6) for $K = 1$, $K=3$, and $K=7$.  For which set is the cross-validation approximation to the test error the lowest?
+```{r}
+k <- c(1, 3, 7)
+for (K in k){
+  for (i in 1:9){
+    testset <- Weekly[Weekly$Index == i,]
+    trainset <- Weekly[Weekly$Index != i,]
+    trainset <- trainset[,c("Lag1", "Lag2", "Lag3", "Lag4", "Lag5", "Direction")]
+    for (j in 1:nrow(testset)){
+      newp <- c(testset$Lag1[j], testset$Lag2[j], testset$Lag3[j], testset$Lag4[j], testset$Lag5[j])
+      pred[j] <- KNN.decision(newp, K = K, trainset)
+    }
+    ERR[i] <- sum(pred != testset$Direction) / nrow(testset)
+  }
+  cat('The mean is', mean(ERR), 'for K =', K,"\n")
+}
+```
