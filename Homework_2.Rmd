@@ -1,0 +1,183 @@
+---
+title: "GR5206 Homework 2"
+author: "Hanao Li"
+date: "9/21/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Part 1: Loading and Cleaning the Data in R
+
+#### i.
+
+```{r}
+# Load data into housing dataframe
+setwd('~/Desktop/R')
+housing <- read.csv('NYChousing.csv', header = TRUE)
+```
+
+#### ii.
+
+```{r}
+# Check rows and columns of the dataframe
+dim(housing)
+n <- nrow(housing)  # store rows to solve question no.5
+```
+#### There are 2506 rows and 22 columns
+
+#### iii.
+
+```{r}
+# Check the number of missing rows for each column variable
+apply(is.na(housing), 2, sum)
+```
+#### This command check the total missing rows of each column variable, for example there are 52 missing data for 'Value' variable
+
+
+#### iv.
+```{r}
+# Remove the missing rows for Value
+housing <- housing[!is.na(housing$Value),]
+```
+
+#### v.
+```{r}
+# Check how many rows were removed
+n - nrow(housing)
+```
+#### From the result, we could see that there are 52 rows were removed and this agress with the result we get from (iii)
+
+#### vi.
+```{r}
+# Create new variable called logValue
+housing['logValue'] <- log(housing$Value)
+summary(housing$logValue)
+```
+#### The minimum is 8.41, the median is 13.75, the mean is 13.68, the maximum is 20.47
+
+#### vii.
+```{r}
+# Create new variable called logUnits
+housing['logUnits'] <- log(housing$UnitCount)
+summary(housing$logUnits)
+```
+
+#### viii.
+```{r}
+# Create new variable called after1950
+housing['after1950'] <- ifelse(housing$YearBuilt >= 1950, TRUE, FALSE)
+```
+
+## Part 2: EDA
+#### i.
+```{r}
+# Plot property logValue against property logUnits
+plot(housing$logUnits, housing$logValue, xlab = 'logUnits', ylab = 'logValue')
+```
+
+#### ii.
+```{r}
+# Make a new plot adding the fator after1950
+plot(housing$logUnits, housing$logValue, xlab = 'logUnits', ylab = 'logValue', col = factor(housing$after1950))
+legend("bottomright", legend = levels(factor(housing$after1950)), fill =unique(factor(housing$after1950)))
+```
+
+#### From this plot, we could see that for housing built after year 1950, their logUnits and logValue is higher than the housing built before year 1950. The more units there are, the higher their values. So housing built after 1950 has more units and thus their values are higher
+
+#### iii.
+```{r}
+cor(housing$logUnits, housing$logValue)
+```
+#### Correlation between property logValue and property logUnits from the whole data is 0.87
+
+```{r}
+man <- housing[housing$Borough == 'Manhattan',]
+cor(man$logUnits, man$logValue)
+```
+#### Correlation between property logValue and property logUnits from just Manhattan is 0.88
+
+```{r}
+bro <- housing[housing$Borough == 'Brooklyn',]
+cor(bro$logUnits, bro$logValue)
+```
+#### Correlation between property logValue and property logUnits from just Brooklyn is 0.91
+
+```{r}
+aft <- housing[housing$after1950 == 'TRUE',]
+cor(aft$logUnits, aft$logValue)
+```
+#### Correlation between property logValue and property logUnits from properties built after 1950 is 0.72
+
+```{r}
+bef <- housing[housing$after1950 == 'FALSE',]
+cor(bef$logUnits, bef$logValue)
+```
+#### Correlation between property logValue and property logUnits from properties built before 1950 is 0.86
+
+#### iv.
+```{r}
+# Create a single plot showing property logValue against property logUnits for Manhattan and Brooklyn
+plot(man$logUnits, man$logValue, xlab = 'logUnits', ylab = 'logValue', col = 2)
+points(bro$logUnits, bro$logValue, col = 3)
+legend("bottomright", legend = c("Manhattan", "Brooklyn"), col = c(2,3), pch = 15)
+```
+
+#### v.
+```{r}
+# Use a single line to calculate the median value of Manhattan properties
+median(housing$Value[housing$Borough == 'Manhattan'], na.rm = TRUE)
+```
+
+#### vi.
+```{r}
+# Create side by side box plots comparing property logValue across the five boroughs.
+bronx <- housing$logValue[housing$Borough == 'Bronx']
+brooklyn <- housing$logValue[housing$Borough == 'Brooklyn']
+manhattan <- housing$logValue[housing$Borough == 'Manhattan']
+queens <- housing$logValue[housing$Borough == 'Queens']
+island <- housing$logValue[housing$Borough == 'Staten Island']
+boxplot(bronx,brooklyn, manhattan, queens, island, names = c('Bronx', 'Brooklyn', 'Manhattan', 'Queens', 'Island'), horizontal = FALSE, main = 'logValues of five boroughs', xlab = 'logValue', cex.axis = 0.8)
+```
+
+#### vii.
+```{r}
+# Calculate the median property values for five boroughs.
+median(housing$Value[housing$Borough == 'Bronx'])
+median(housing$Value[housing$Borough == 'Brooklyn'])
+median(housing$Value[housing$Borough == 'Manhattan'])
+median(housing$Value[housing$Borough == 'Queens'])
+median(housing$Value[housing$Borough == 'Staten Island'])
+```
+#### The median property values for Bronx is 1192950
+#### The median property values for Brooklyn is 417610
+#### The median property values for Manhattan is 1172362
+#### The median property values for Queens is 3611700
+#### The median property values for Staten Island is 2654100
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

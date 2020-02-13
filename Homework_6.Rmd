@@ -1,0 +1,284 @@
+---
+title: "Homework 6"
+author: "Hanao Li  hl3202"
+date: "November 20, 2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+####Part 1: Inverse Transform Method
+1.
+
+If $X\sim Cauchy(\alpha,\beta)$ and $U\sim Unif(0,1)$, then $X = \alpha+\beta tan(\pi(U-1/2))$
+
+Since we have $X\sim Cauchy(0,1)$, then $X = tan(\pi(U-1/2))$
+
+
+2.
+```{r}
+cauchy.sim <- function(n){
+  u <- runif(n)
+  return(tan(pi*(u-0.5)))
+}
+cauchy.sim(10)
+```
+
+3.
+```{r}
+cauchy.draws <- cauchy.sim(1000)
+hist(cauchy.draws[cauchy.draws < 5 & cauchy.draws > -5], prob = T, main = "Cauchy Draws", xlab = "x")
+x <- seq(-5, 5, 0.01)
+lines(x,1/pi*1/(1+x^2))
+```
+
+####Part 2: Reject-Accept Method
+4.
+```{r}
+f <- function(x){
+  return(ifelse((x < -1 | x > 2), 0, (4-x^2)/9))
+}
+x <- seq(-1,2,0.01)
+plot(x, f(x), xlim = c(-3,3), type = 'l')
+```
+
+
+5.
+
+$f'(x) = -\frac{2x}{9} = 0$, then $X_{max} = 0$, $f_{max} = \frac{4}{9}$
+```{r}
+x.max = 0
+f.max = 4/9
+e <- function(x){
+  return(ifelse((x < -1 | x > 2), Inf, f.max))
+}
+```
+
+6.
+```{r}
+n.samps <- 10000
+n <- 0
+samps <- numeric(n.samps)
+while (n < n.samps){
+  y <- runif(1,-1,2)
+  u <- runif(1)
+  if (u < f(y)/e(y)){
+    n <- n + 1
+    samps[n] <- y
+  }
+}
+f.draws <- samps
+```
+
+7.
+```{r}
+hist(f.draws, prob = T, ylab = "f(x)", xlab = "x", main = "Histogram of draws from f(x)")
+lines(x, f(x), lty = 2)
+```
+
+####Problem 3: Reject-Accpet Method Continued
+8.
+```{r}
+f <- function(x){
+  return(1/sqrt(2*pi)*exp(-x^2/2))
+}
+x <- seq(-5, 5, 0.01)
+plot(x, f(x), type = 'l', main = "Standard Normal Distribution")
+```
+
+9.
+```{r}
+e <- function(x,a){
+  return((1/pi*1/(1+x^2))/a)
+}
+```
+
+10.
+```{r fig.height = 10, fig.width = 10}
+library(ggplot2)
+suppressWarnings(library(reshape2))
+# We first choose alpha value from 0.1 to 0.9
+x <- seq(-10,10,0.01)
+fx <- f(x)
+alpha <- seq(0.1,0.9,0.1)
+m <- list()
+for (i in 1:length(alpha)){
+  nam <- paste("a", alpha[i], sep = "")
+  m[[i]] <- e(x,alpha[i])
+  names(m)[i] <- nam
+}
+m <- do.call(cbind,m)
+m <- as.data.frame(cbind(x,fx,m))
+newm <- melt(m, id.vars = "x", value.name = "fx")
+ggplot(newm, aes(x, fx, col = variable)) +
+  geom_line()
+
+# Alpha seems to be good from 0.6 to 0.9
+
+m <- list()
+alpha <- seq(0.6,0.9,0.1)
+for (i in 1:length(alpha)){
+  nam <- paste("a", alpha[i], sep = "")
+  m[[i]] <- e(x,alpha[i])
+  names(m)[i] <- nam
+}
+m <- do.call(cbind,m)
+m <- as.data.frame(cbind(x,fx,m))
+newm <- melt(m, id.vars = "x", value.name = "fx")
+ggplot(newm, aes(x, fx, col = variable)) +
+  geom_line()
+
+# Alpha is good at 0.8
+```
+
+11.
+```{r}
+normal.sim <- function(n){
+  n.samps <- n
+  n <- 0
+  samps <- numeric(n.samps)
+  a = 0.8
+  while (n < n.samps){
+    y <- cauchy.sim(1)
+    u <- runif(1)
+    if (u < f(y)/e(y,a)){
+      n <- n + 1
+      samps[n] <- y
+    }
+  }
+  return(samps)
+}
+normal.sim(10)
+```
+
+12.
+```{r}
+normal.draws <- normal.sim(10000)
+hist(normal.draws, prob = T, main = "Normal Draws")
+x <- seq(-5, 5, 0.01)
+lines(x, dnorm(x), lty = 2)
+```
+
+####Part 3: Simulation with Built-in R Functions
+13.
+```{r}
+x <- 5
+x.vals <- c(x)
+while (x > 0){
+  r <- runif(1, -2, 1)
+  x <- x + r
+  x.vals <- c(x.vals, x)
+}
+x.vals
+```
+
+14.
+```{r fig.width = 10}
+plot(0:(length(x.vals) - 1), x.vals, type = 'o', xlab = "Steps", ylab = "Value")
+```
+
+15.
+```{r fig.width = 10}
+random.walk <- function(x.start = 5, plot.walk = TRUE){
+  x.vals <- c(x.start)
+  num.steps <- 0
+  while (x.start > 0){
+    r <- runif(1, -2, 1)
+    x.start <- x.start + r
+    x.vals <- c(x.vals, x.start)
+    num.steps <- num.steps + 1
+  }
+  if (plot.walk == TRUE){
+    plot(0:num.steps, x.vals, type = 'o', xlab = "Steps", ylab = "Value")
+  }
+  output <- list(x.vals, num.steps)
+  names(output) <- c("x.vals", "num.steps")
+  
+  return(output)
+}
+
+random.walk()
+random.walk()
+
+random.walk(10, F)
+random.walk(10, F)
+```
+
+16.
+```{r}
+# The expected number of iterations should be 5/(1/2) + 1 = 11
+steps <- c()
+for (i in 1:10000){
+  random.walk(, F)
+  steps[i] <- random.walk(, F)[[2]]
+}
+mean(steps)
+```
+
+17.
+```{r}
+random.walk <- function(x.start = 5, plot.walk = TRUE, seed = NULL){
+  if (is.null(seed) == FALSE){
+    set.seed(seed)
+  }
+  x.vals <- c(x.start)
+  num.steps <- 0
+  while (x.start > 0){
+    r <- runif(1, -2, 1)
+    x.start <- x.start + r
+    x.vals <- c(x.vals, x.start)
+    num.steps <- num.steps + 1
+  }
+  if (plot.walk == TRUE){
+    plot(0:num.steps, x.vals, type = 'o', xlab = "Steps", ylab = "Value")
+  }
+  output <- list(x.vals, num.steps)
+  names(output) <- c("x.vals", "num.steps")
+  
+  return(output)
+}
+
+random.walk()
+random.walk()
+
+random.walk(, F, 33)
+random.walk(, F, 33)
+```
+
+####Part 4: Monte Carlo Integration
+18.
+```{r fig.height = 5, fig.width = 5}
+g <- function(x){
+  return(sqrt(1-x^2))
+}
+plot(seq(0, 1, .01), g(seq(0, 1, .01)), type = 'l', col = 'purple')
+```
+
+19.
+$A = \frac{1}{4} \pi r^2 = \frac{1}{4} \pi* 1^2 = \frac{\pi}{4}$
+
+20.
+```{r}
+# Choose uniform distribution when perform this simulation
+g.over.p <- function(x){
+  return(4*sqrt(1-x^2))
+}
+mean(g.over.p(runif(10000000)))
+pi
+pi - mean(g.over.p(runif(10000000)))
+1/1000 - abs(pi - mean(g.over.p(runif(10000000))))
+# So we estimated the value of pi within a 1/1000 of the true value
+```
+
+
+
+
+
+
+
+
+

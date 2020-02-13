@@ -1,0 +1,107 @@
+---
+title: "Homework 3"
+author: "Hanao Li"
+date: "10/3/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+i.
+```{r}
+# Input the html file
+setwd("~/Desktop/R")
+nets1819 <- readLines('NetsSchedule1819.html', warn = FALSE)
+```
+ii.
+```{r}
+length(nets1819)
+sum(nchar(nets1819))
+max(nchar(nets1819))
+```
+
+iii.
+
+The first game is played against Detroit at 7:00 PM on Wed, Oct 17.
+
+The last game is played against Miami at 8:00 PM on Wed, Apr 10.
+
+iv.
+
+Line 64 and Line 65 holds the information about the game of the regular season.
+
+v.
+```{r}
+# Extract the line that contains the info
+pat <- "[0-9]:00[ ]PM<"
+grep(nets1819, pattern = pat)
+newl <- nets1819[grep(nets1819, pattern = pat)]
+```
+Line 64 was extracted to find the game info.
+
+vi.
+```{r}
+# Substring the line to make it contain information only about the game
+newl <- substr(newl, gregexpr("[A-Z][a-z][a-z],", newl)[[1]][1], gregexpr("PM", newl)[[1]][82] + 1)
+
+# Split the string into 82 lines
+newl <- unlist(strsplit(newl, split = "<svg class="))
+length(newl)
+
+# Clean the lines
+for (i in 1:length(newl)){
+  newl[i] <- substr(newl[i], gregexpr("[A-Z][a-z][a-z],", newl[i])[[1]][1], gregexpr("PM", newl[i])[[1]][1] + 1)
+}
+head(newl, 2)
+```
+
+vii.
+```{r}
+# Use grep function to find the locations
+grep("[A-Z][a-z][a-z],[ ][A-Z][a-z][a-z][ ][0-9][0-9]?", newl)
+head(grep("[A-Z][a-z][a-z],[ ][A-Z][a-z][a-z][ ][0-9][0-9]?", newl, value = TRUE),1)
+tail(grep("[A-Z][a-z][a-z],[ ][A-Z][a-z][a-z][ ][0-9][0-9]?", newl, value = TRUE),1)
+```
+
+
+viii.
+```{r}
+# Extract the date
+date <- unlist(regmatches(newl, gregexpr("[A-Z][a-z][a-z],[ ][A-Z][a-z][a-z][ ][0-9][0-9]?", newl)))
+head(date)
+```
+
+ix.
+```{r}
+# Extract the time
+time <- unlist(regmatches(newl, gregexpr("[0-9][0-9]?:[0-9][0-9][ ][AP]M", newl)))
+head(time)
+```
+
+x.
+```{r}
+# Extract the status of home or away
+home <- unlist(regmatches(newl, gregexpr("@|vs", newl)))
+home <- ifelse(home == "vs", 1, 0)
+head(home)
+```
+
+xi.
+```{r}
+# Extract the opponent
+opponent <- c()
+for (i in 1:length(newl)){
+  opponent[i] <- substr(newl[i], gregexpr("title=", newl[i])[[1]][1] + 7, gregexpr("src=", newl[i])[[1]][1] - 3)
+}
+head(opponent)
+```
+
+xii.
+```{r}
+# Combine vectors and print the first 10 rows of dataframe
+data <- cbind(date, time, opponent, home)
+print(data[1:10,], quote = FALSE)
+```
+The data matches the first 10 games as seen from the web browser.

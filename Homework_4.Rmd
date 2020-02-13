@@ -1,0 +1,138 @@
+---
+title: "Homework 4"
+author: "Hanao Li    hl3202"
+date: "10/22/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(plyr)
+debt <- read.csv('debt.csv', as.is = TRUE)
+dim(debt)
+head(debt)
+```
+
+1. 
+
+a)
+```{r}
+mean.growth <- function(debt){
+  return(mean(debt$growth))
+}
+```
+
+b)
+```{r}
+library(plyr)
+country <- signif(daply(debt, .(Country), mean.growth), 3)
+country[names(country) == "Australia"]
+country[names(country) == "Netherlands"]
+
+```
+
+2.
+```{r}
+rate <- signif(daply(debt, .(Year), mean.growth), 3)
+rate[names(rate) == 1972]
+rate[names(rate) == 1989]
+  plot(names(rate), rate, ylab = 'Growth Rate', xlab = 'Year')
+```
+
+3.
+
+a)
+```{r}
+signif(cor(debt$growth, debt$ratio), 4)
+```
+
+b)
+```{r}
+corfun <- function(debt){
+  return(cor(debt$growth, debt$ratio))
+}
+signif(corcountry <- daply(debt, .(Country), corfun), 3)
+signif(mean(corcountry), 4)
+hist(corcountry, breaks = 10)
+```
+
+c)
+```{r}
+signif((coryear <- daply(debt, .(Year), corfun)), 3)
+signif(mean(coryear), 4)
+hist(coryear, breaks = 10)
+```
+
+d)
+```{r}
+# France, Germany, Japan, Italy these four countries have a correlation less than -0.5 and Norway has a correlation larger than 0.5.
+# Year 1946, 1957, 1960, 1961, 1970 has a correlation less than -0.5 and Year 1978 has a correlation larger than 0.4.
+```
+
+4.
+```{r}
+fit <- lm(debt$growth ~ debt$ratio)
+signif(fit$coefficients, 3)
+plot(debt$ratio, debt$growth, xlab = 'Ratio', ylab = 'Growth')
+abline(fit)
+```
+
+5.
+```{r}
+plotcor <- function(debt){
+  if (debt$Country %in% names(corcountry[corcountry <= -0.5])){
+  plot(debt$ratio, debt$growth)
+  title(main = debt$Country[1])
+  }
+}
+par(mfrow = c(2,2))
+suppressWarnings(d_ply(debt, .(Country), plotcor))
+```
+
+6.
+
+a)
+```{r}
+france <- debt[debt$Country == 'France',]
+dim(france)
+```
+
+
+b)
+```{r}
+suppressMessages(library(dplyr)) 
+france$next.growth <- ifelse((france$Year + 1) %in% france$Year,  round(lead(france$growth), 3), NA)
+print(france[(france$Year == 1971 | france$Year == 1972),])
+```
+
+7.
+```{r}
+debt$next.growth <- ifelse((debt$Year + 1) == lead(debt$Year), round(lead(debt$growth), 3), NA)
+print(debt[(debt$Country == 'France' & debt$Year == 2009),])
+```
+
+8.
+```{r}
+fit2 <- lm(debt$next.growth ~ debt$ratio)
+signif(fit2$coefficients, 3)
+plot(debt$ratio, debt$next.growth, xlab = 'Ratio', ylab = 'Next.Growth')
+abline(fit2)
+summary(fit)
+summary(fit2)
+# From the summary,we could see that the previous model has a larger R squared value compared to this model, although both of their R squared values are very small. But this model has a smaller residual standard error. From the plots, we could tell that both of them are not doing very well.
+```
+
+9.
+```{r}
+fit3 <- lm(debt$next.growth ~ debt$growth)
+signif(fit3$coefficients, 3)
+plot(debt$growth, debt$next.growth, xlab = 'Growth', ylab = 'Next.Growth')
+abline(fit3)
+summary(fit2)
+summary(fit3)
+# From the summary we could see that this model has a larger R squared value and a smaller residual standard error and from the graph we could see that this model is doing pretty good compared to the previous model. So we can conclude that current growth is a better predictor of future growth.
+```
+

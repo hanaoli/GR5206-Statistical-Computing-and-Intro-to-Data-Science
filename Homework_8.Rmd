@@ -1,0 +1,181 @@
+---
+title: "Homework 8"
+author: "Hanao Li   hl3202"
+date: "November 30, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1.
+```{r}
+n <- 100
+p <- 10
+s <- 3
+set.seed(0)
+x <- matrix(rnorm(n*p), n, p)
+b <- c(-0.7, 0.7, 1, rep(0, p-s))
+y <- x %*% b + rt(n, df = 2)
+cor(y, x)
+# From the correlation between predictor variable x and response y, we are not able to pick out 
+# each of the 3 relevant variables.
+```
+
+2.
+```{r}
+xp <- seq(-5, 5, 0.01)
+plot(xp, dnorm(xp), type = 'l', col = "red", xlab = 'x', ylab = 'Density')
+lines(xp, dt(xp, df = 3), lty = 2, col = "blue")
+# From the plot, we could see that the t-distribution has thicker tails. 
+```
+
+3.
+```{r}
+psi <- function(r, c = 1){
+  return(ifelse((r^2 > c^2), 2*c*abs(r)-c^2, r^2))
+}
+
+huber.loss <- function(b){
+  sum(psi(y - x %*% b))
+}
+```
+
+4.
+```{r warning=F}
+library(numDeriv)
+grad.descent <- function(f, x1, max.iter = 200, step.size = 0.001, stopping.deriv = 0.1){
+  n <- length(x1)
+  xmat <- matrix(0, n, max.iter)
+  xmat[, 1] <- x1
+  for (i in 2:max.iter){
+    gradient <- grad(f, xmat[, i-1])
+    
+    if(all(abs(gradient) < stopping.deriv)){
+      i <- i - 1
+      break
+    }
+    xmat[, i] <- xmat[, i-1] - step.size * gradient
+  }
+  xmat <- xmat[, 1:i]
+  return(list(x = xmat[, i], xmat = xmat, i = i))
+}
+gd <- grad.descent(huber.loss, x1 = rep(0, p), max.iter = 200, step.size = 0.001, stopping.deriv = 0.1)
+gd$x
+gd$i
+```
+
+5.
+```{r}
+obj <- apply(gd$xmat[, 1:gd$i], 2, huber.loss)
+plot(1:gd$i, obj, xlab = 'Iteration', ylab = 'Huber Loss')
+# From the plot, we could see that at the start the change from each iteration is significant, 
+# and the difference is becoming smaller and smllaer towards the end.
+```
+
+6.
+```{r}
+gd1 <- grad.descent(huber.loss, x1 = rep(0, p), max.iter = 200, step.size = 0.1, stopping.deriv = 0.1)
+gd1$i
+obj1 <- apply(gd1$xmat[, 1:gd1$i], 2, huber.loss)
+plot(150:200, obj1[150:200], xlab = 'Iteration', ylab = 'Huber Loss')
+# From the plot, we could see that the huber loss is oscillating between 1300 and 3000. 
+# It is not converging at the end.
+gd$xmat
+# From the xmat, we could see that the coefficients are not converging either. 
+# They are oscillating between positive and negative values.
+```
+
+7.
+```{r}
+sparse.grad.descent <- function(f, x1, max.iter = 200, step.size = 0.001, stopping.deriv = 0.1){
+  n <- length(x1)
+  xmat <- matrix(0, n, max.iter)
+  xmat[, 1] <- x1
+  for (i in 2:max.iter){
+    gradient <- grad(f, xmat[, i-1])
+    
+    if(all(abs(gradient) < stopping.deriv)){
+      i <- i - 1
+      break
+    }
+    new <- xmat[, i-1] - step.size * gradient
+    new[abs(new) < 0.05] <- 0
+    xmat[, i] <- new
+  }
+  xmat <- xmat[, 1:i]
+  return(list(x = xmat[, i], xmat = xmat, i = i))  
+}
+gd.sparse <- sparse.grad.descent(huber.loss, x1 = rep(0, p))
+gd.sparse$x
+```
+
+8.
+```{r}
+for (i in 1:10){
+  assign(paste("X", i, sep = ""), x[, i])
+}
+fit <- lm(y ~ X1 + X2 + X3 + X4 + X5+ X6 + X7 + X8 + X9 + X10 + 0)
+fit$coefficients
+mean((b - fit$coefficients)^2)
+mean((b - gd$x)^2)
+mean((b - gd.sparse$x)^2)
+# From the results, we could see that gd.sparse is the best.
+```
+
+9.
+```{r}
+set.seed(10)
+y <- x %*% b + rt(n, df = 2)
+gd <- grad.descent(huber.loss, x1 = rep(0, p))
+gd.sparse <- sparse.grad.descent(huber.loss, x1 = rep(0, p))
+gd$x
+gd.sparse$x
+mean((b - gd$x)^2)
+mean((b - gd.sparse$x)^2)
+# Gradient descent has a smaller mean squared error. 
+# We can deduce that the variability of the sparse method is higher than the regular method.
+```
+
+10.
+```{r}
+gdmean <- c()
+gdsmean <- c()
+for (i in 1:10){
+  y <- x %*% b + rt(n, df = 2)
+  gd <- grad.descent(huber.loss, x1 = rep(0, p))
+  gd.sparse <- sparse.grad.descent(huber.loss, x1 = rep(0, p))
+  gdmean[i] <- mean((b - gd$x)^2)
+  gdsmean[i] <- mean((b - gd.sparse$x)^2)
+}
+summary(gdmean)
+summary(gdsmean)
+# Gradient descent has a lower average mean squared error.
+# Sparsified gradient descent has a lower minimum mean squared error.
+# This is in line with our interpretation of the variability in the previous question.
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

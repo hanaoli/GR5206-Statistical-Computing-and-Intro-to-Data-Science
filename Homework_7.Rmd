@@ -1,0 +1,158 @@
+---
+title: "Homework 7"
+author: "Hanao Li  hl3202"
+date: "November 21, 2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+i.
+```{r}
+poisLoglik <- function(lambda, x){
+  return(sum(x*log(lambda) - lambda - log(factorial(x))))
+}
+data <- c(1, 0, 0, 1, 1)
+lambda <- 1
+poisLoglik(lambda, data)
+```
+
+
+ii.
+```{r}
+data <- read.csv("moretti.csv", header = TRUE)
+count_new_genres <- function(x){
+  return(sum(data$Begin == x))
+}
+
+count_new_genres(1803)
+count_new_genres(1850)
+```
+
+iii.
+```{r}
+new_genres <- c()
+n <- 0
+for (i in 1740:1900){
+  n <- n + 1
+  new_genres[n] <- count_new_genres(i)
+}
+# They should be at poistion 1803 - 1740 + 1 = 64 and 1850 - 1740 + 1 = 111 and their values should be 0 and 3, respectively
+new_genres[1803 - 1740 + 1]
+new_genres[1850 - 1740 + 1]
+```
+
+iv.
+```{r fig.width = 10}
+x <- seq(0, 1, 0.001)
+fx <- c()
+for (i in 1:length(x)){
+  fx[i] <- poisLoglik(x[i], new_genres)
+}
+plot(x, fx, type = 'l')
+# From the plot, we could see that the maximum is at around 0.273
+```
+
+v.
+```{r}
+newpoisLoglik <- function(x){
+  -(sum(new_genres*log(x)-x-log(factorial(new_genres))))
+}
+suppressWarnings(nlm(newpoisLoglik, 0.001))
+```
+
+vi.
+```{r}
+intergenre_intervals <- diff(data$Begin)
+mean(intergenre_intervals)
+sd(intergenre_intervals)
+Mcov <- sd(intergenre_intervals) / mean(intergenre_intervals)
+Mcov
+```
+
+vii.
+
+a.
+```{r}
+interval <- function(n){
+  count <- 0
+  intervals <- c()
+  for (i in 2:length(n)){
+    if (n[i] >= 2){
+      intervals <- c(intervals, count + 1)
+      for (j in 1:(n[i] - 1)){
+        intervals <- c(intervals, 0)
+      }
+      count <- 0
+      next
+    }
+    if (n[i] != 0 & n[i - 1] != 0){
+      intervals <- c(intervals, 1)
+      count <- 0
+      next
+    }
+    else if (n[i] == 0){
+      count = count + 1
+    }
+    else{
+      intervals <- c(intervals, count + 1)
+      count <- 0
+    }
+  }
+  return(intervals)
+}
+
+interval(new_genres)
+intergenre_intervals
+```
+
+b.
+```{r}
+poisson.sim <- function(years, mean){
+  r <- rpois(years, mean)
+  i <- interval(r)
+  cov <- sd(i) / mean(i)
+  
+  output <- list(i, cov)
+  names(output) <- c("Inter-appearance Interval", "Coefficient of Variation")
+  
+  return(output)
+}
+poisson.sim(161, 0.273)
+mean(poisson.sim(161, 0.273)[[1]])
+```
+
+viii.
+```{r}
+covar <- c()
+for (i in 1:10000){
+  covar[i] <- poisson.sim(161, 0.273)[[2]]
+}
+summary(covar)
+p <- (sum(covar > Mcov) / 10000) * 100
+cat("There are ", p,"% of simulation runs have higher coefficient of variation than Moretti's data")
+```
+
+ix.
+
+This result tells us that Moretti's data generally has a higher coefficient of variation than the simulation runs. The coefficient of variation is equal to the standard deviation divided by the mean. Fixing the mean of interval since we assume there will be the same amount of genres appear during the given period, we conclude that the Moretti's data have a higher variance. This leads to the conclusion that genres tend to appear together in burst.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
